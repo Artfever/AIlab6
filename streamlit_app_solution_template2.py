@@ -1,98 +1,50 @@
-import streamlit as st
-import math
-import heapq
-import networkx as nx
+"""Modular Streamlit version of the GUI."""
+
 import matplotlib.pyplot as plt
-# import the necessary functions and variables from searchAlgos.py
-from searchAlgos import (
-    hospital_graph,
-    locations,
-    gbfs,
-    a_star
-)
+import networkx as nx
+import streamlit as st
 
-# Streamlit GUI
-#*******************#
+from searchAlgos import hospital_graph, locations, gbfs, a_star
 
-# Set Page Config
+st.set_page_config(page_title="Informed Search", page_icon="🤖", layout="wide")
+st.title("Emergency Supply Robot")
+st.write("Compare Greedy Best-First Search and A* on a weighted hospital graph.")
 
-# write meaningful title and description for the app
+nodes = list(hospital_graph)
+start = st.selectbox("Select Initial Node", nodes, index=nodes.index("Pharmacy"))
+goal = st.selectbox("Select Goal Node", nodes, index=nodes.index("Emergency_Ward"))
+algorithm = st.selectbox("Select Search Algorithm", ["GBFS", "A*"])
 
-# define the nodes and their coordinates
-nodes = list(hospital_graph.keys())
-
-# create a selectbox for the user to choose the start and goal nodes
-start = st.selectbox(
-    "Select Initial Node",
-    #pass the list of nodes to the selectbox
-    # set the default value to "Pharmacy"
-)
-
-goal = st.selectbox(
-    "Select Goal Node",
-    #pass the list of nodes to the selectbox
-    # set the default value to "Emergency_Ward"
-)
-
-# create a selectbox for the user to choose the search algorithm
-
-
-if st.button("Run Search"):
-
-    if algorithm == "GBFS":
-
-        # run the GBFS algorithm with the selected start and goal nodes
-        pass
-    else:
-
-        # run the A* algorithm with the selected start and goal nodes
-        pass
-
+if st.button("Run Search", type="primary"):
+    search = gbfs if algorithm == "GBFS" else a_star
+    path, cost, expansion_order = search(start, goal)
     if path is None:
-
-       # display a error message indicating that no path was found
-       pass 
-
+        st.error("No path was found between the selected nodes.")
     else:
-       
-        # Display result
         st.subheader("Search Result")
+        st.write(f"**Algorithm:** {algorithm}")
+        st.write(f"**Solution Path:** {' -> '.join(path)}")
+        st.write(f"**Total Path Cost:** {cost:.2f}")
+        st.write(f"**Expansion Order:** {' -> '.join(expansion_order)}")
 
-        st.write(
-            f"**Algorithm:** {algorithm}"
-        )
-
-        st.write(
-            f"**Solution Path:** {' → '.join(path)}"
-        )
-
-        st.write(
-            f"**Total Path Cost:** {cost:.2f}"
-        )
-
-
-        
-        # Visualize NetworkX graph
-        
-        G = nx.DiGraph()
-
+        graph = nx.DiGraph()
         for node, neighbors in hospital_graph.items():
-
+            graph.add_node(node)
             for neighbor, weight in neighbors.items():
+                graph.add_edge(node, neighbor, weight=weight)
 
-               pass
-        pos = locations
-
-        fig, ax = plt.subplots(
-            figsize=(10, 6)
-        )
-
-        
-
-        ax.set_title(
-            f"{algorithm} Solution Path"
-        )
-
+        path_edges = set(zip(path, path[1:]))
+        edge_colors = ["crimson" if edge in path_edges else "#9aa0a6" for edge in graph.edges()]
+        node_colors = [
+            "#90ee90" if node == start else "#ff9999" if node == goal else
+            "#ffd580" if node in path else "#add8e6" for node in graph.nodes()
+        ]
+        fig, ax = plt.subplots(figsize=(11, 6))
+        nx.draw(graph, locations, ax=ax, with_labels=True, node_color=node_colors,
+                node_size=2400, edge_color=edge_colors, arrows=True, arrowsize=20,
+                font_weight="bold")
+        nx.draw_networkx_edge_labels(graph, locations,
+                                     edge_labels=nx.get_edge_attributes(graph, "weight"), ax=ax)
+        ax.set_title(f"{algorithm} Solution Path")
         ax.axis("off")
-
         st.pyplot(fig)
